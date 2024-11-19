@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, CircleMarker, Tooltip, LayersControl, Polyline
 import "leaflet/dist/leaflet.css";
 import axios from "axios";
 
-const BACKEND_URL = "http://localhost:8000";
+const BACKEND_URL = "https://propagationpy.onrender.com";
 
 const App = () => {
   const [siteCoordinates, setSiteCoordinates] = useState({ lat: "", lng: "" });
