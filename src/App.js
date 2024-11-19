@@ -1,12 +1,13 @@
 import React, { useState } from "react";
-import { MapContainer, TileLayer, CircleMarker, Tooltip, LayersControl, Polyline, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Tooltip, LayersControl, Polyline, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import axios from "axios";
 
+//const BACKEND_URL = "http://localhost:8000";
 const BACKEND_URL = "https://propagationpy.onrender.com";
 
 const App = () => {
-  const [siteCoordinates, setSiteCoordinates] = useState({ lat: "", lng: "" });
+  const [siteCoordinates, setSiteCoordinates] = useState({ lat: -8.681135, lng: 115.197060 });
   const [coveragePoints, setCoveragePoints] = useState([]);
   const [radius, setRadius] = useState(2); // Default radius in kilometers
   const [antennaParams, setAntennaParams] = useState({
@@ -30,7 +31,13 @@ const App = () => {
     }
   };
 
-  const fetchCoverageData = async (updatedAntennaParams = antennaParams) => {
+  const MapRecenter = ({ center }) => {
+    const map = useMap();
+    map.setView(center, map.getZoom());
+    return null;
+  };
+
+  const fetchCoverageData = async () => {
     const { lat, lng } = siteCoordinates;
     if (!lat || !lng) {
       alert("Please enter valid latitude and longitude for the site!");
@@ -38,26 +45,22 @@ const App = () => {
     }
 
     try {
-      // Clear existing points
-      setCoveragePoints([]);
-
-      // Fetch new data from backend
+      setCoveragePoints([]); // Clear existing points
       const response = await axios.post(`${BACKEND_URL}/propagation`, {
         site: { lat: parseFloat(lat), lng: parseFloat(lng) },
         model: {
-          ...updatedAntennaParams,
-          azimuth: parseFloat(updatedAntennaParams.azimuth), // Use updated azimuth
-          beamwidth: parseFloat(updatedAntennaParams.beamwidth),
-          downtilt: parseFloat(updatedAntennaParams.downtilt),
-          antenna_height: parseFloat(updatedAntennaParams.antenna_height),
-          frequency: parseFloat(updatedAntennaParams.frequency),
+          ...antennaParams,
+          azimuth: parseFloat(antennaParams.azimuth),
+          beamwidth: parseFloat(antennaParams.beamwidth),
+          downtilt: parseFloat(antennaParams.downtilt),
+          antenna_height: parseFloat(antennaParams.antenna_height),
+          frequency: parseFloat(antennaParams.frequency),
         },
         resolution: 20,
         radius: parseFloat(radius),
       });
 
-      // Update points with new data
-      setCoveragePoints(response.data);
+      setCoveragePoints(response.data); // Update with new points
     } catch (error) {
       console.error("Error fetching coverage data:", error);
     }
@@ -74,19 +77,17 @@ const App = () => {
     const y = Math.sin(dLng) * Math.cos(lat2Rad);
     const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
 
-    const azimuth = toDegrees(Math.atan2(y, x));
-    return (azimuth + 360) % 360; // Normalize to 0-360 degrees
+    return (toDegrees(Math.atan2(y, x)) + 360) % 360; // Normalize azimuth to 0-360°
   };
 
   const MapClickHandler = () => {
-    useMapEvents({
+    useMap({
       click: (e) => {
         if (!siteCoordinates.lat || !siteCoordinates.lng) {
           alert("Please set the site coordinates first!");
           return;
         }
 
-        // Calculate new azimuth based on the clicked point
         const newAzimuth = calculateAzimuth(
           parseFloat(siteCoordinates.lat),
           parseFloat(siteCoordinates.lng),
@@ -94,14 +95,10 @@ const App = () => {
           e.latlng.lng
         );
 
-        console.log("Clicked Point:", e.latlng);
-        console.log("Calculated Azimuth:", newAzimuth);
-
-        // Update the azimuth in state and recalculate coverage
-        setClickedPoint(e.latlng);
+        setClickedPoint(e.latlng); // Store clicked point
         setAntennaParams((prevParams) => {
           const updatedParams = { ...prevParams, azimuth: newAzimuth };
-          fetchCoverageData(updatedParams); // Trigger backend call with updated azimuth
+          fetchCoverageData(updatedParams); // Recalculate coverage
           return updatedParams;
         });
       },
@@ -177,7 +174,8 @@ const App = () => {
         </label>
         <button onClick={() => fetchCoverageData()}>Calculate Coverage</button>
       </div>
-      <MapContainer center={[-8.681135, 115.197060]} zoom={14} style={{ height: "600px", width: "100%" }}>
+      <MapContainer center={[siteCoordinates.lat, siteCoordinates.lng]} zoom={14} style={{ height: "600px", width: "100%" }}>
+        <MapRecenter center={[siteCoordinates.lat, siteCoordinates.lng]} />
         <LayersControl position="topright">
           <LayersControl.BaseLayer checked name="Standard Map">
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
