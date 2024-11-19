@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from fastapi.middleware.cors import CORSMiddleware
 from scipy.spatial import KDTree
 import time
+import os
 
 app = FastAPI()
 
@@ -19,6 +20,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+    
 # Google Elevation API Key
 GOOGLE_API_KEY = "AIzaSyDkAWnE66-S2rVK8XBXPp2LLGVePFEw0x0"  # Replace with your valid Google API key
 ELEVATION_URL = "https://maps.googleapis.com/maps/api/elevation/json"
