@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { MapContainer, TileLayer, CircleMarker, Tooltip, LayersControl, Polyline, useMap } from "react-leaflet";
+import React, { useState, useEffect, useRef } from "react";
+import { MapContainer, TileLayer, CircleMarker, Tooltip, LayersControl, Polyline, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import axios from "axios";
 
@@ -19,11 +19,12 @@ const App = () => {
     environment: "urban",
   });
   const [clickedPoint, setClickedPoint] = useState(null);
+  const mapRef = useRef(null); // Reference to the map instance
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (name === "lat" || name === "lng") {
-      setSiteCoordinates({ ...siteCoordinates, [name]: value });
+      setSiteCoordinates({ ...siteCoordinates, [name]: parseFloat(value) });
     } else if (name === "radius") {
       setRadius(value);
     } else {
@@ -31,13 +32,7 @@ const App = () => {
     }
   };
 
-  const MapRecenter = ({ center }) => {
-    const map = useMap();
-    map.setView(center, map.getZoom());
-    return null;
-  };
-
-  const fetchCoverageData = async () => {
+  const fetchCoverageData = async (updatedAntennaParams = antennaParams) => {
     const { lat, lng } = siteCoordinates;
     if (!lat || !lng) {
       alert("Please enter valid latitude and longitude for the site!");
@@ -46,21 +41,22 @@ const App = () => {
 
     try {
       setCoveragePoints([]); // Clear existing points
+
       const response = await axios.post(`${BACKEND_URL}/propagation`, {
         site: { lat: parseFloat(lat), lng: parseFloat(lng) },
         model: {
-          ...antennaParams,
-          azimuth: parseFloat(antennaParams.azimuth),
-          beamwidth: parseFloat(antennaParams.beamwidth),
-          downtilt: parseFloat(antennaParams.downtilt),
-          antenna_height: parseFloat(antennaParams.antenna_height),
-          frequency: parseFloat(antennaParams.frequency),
+          ...updatedAntennaParams,
+          azimuth: parseFloat(updatedAntennaParams.azimuth),
+          beamwidth: parseFloat(updatedAntennaParams.beamwidth),
+          downtilt: parseFloat(updatedAntennaParams.downtilt),
+          antenna_height: parseFloat(updatedAntennaParams.antenna_height),
+          frequency: parseFloat(updatedAntennaParams.frequency),
         },
         resolution: 20,
         radius: parseFloat(radius),
       });
 
-      setCoveragePoints(response.data); // Update with new points
+      setCoveragePoints(response.data); // Update points
     } catch (error) {
       console.error("Error fetching coverage data:", error);
     }
@@ -77,11 +73,11 @@ const App = () => {
     const y = Math.sin(dLng) * Math.cos(lat2Rad);
     const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
 
-    return (toDegrees(Math.atan2(y, x)) + 360) % 360; // Normalize azimuth to 0-360°
+    return (toDegrees(Math.atan2(y, x)) + 360) % 360; // Normalize to 0-360 degrees
   };
 
   const MapClickHandler = () => {
-    useMap({
+    useMapEvents({
       click: (e) => {
         if (!siteCoordinates.lat || !siteCoordinates.lng) {
           alert("Please set the site coordinates first!");
@@ -89,16 +85,16 @@ const App = () => {
         }
 
         const newAzimuth = calculateAzimuth(
-          parseFloat(siteCoordinates.lat),
-          parseFloat(siteCoordinates.lng),
+          siteCoordinates.lat,
+          siteCoordinates.lng,
           e.latlng.lat,
           e.latlng.lng
         );
 
-        setClickedPoint(e.latlng); // Store clicked point
+        setClickedPoint(e.latlng);
         setAntennaParams((prevParams) => {
           const updatedParams = { ...prevParams, azimuth: newAzimuth };
-          fetchCoverageData(updatedParams); // Recalculate coverage
+          fetchCoverageData(updatedParams); // Trigger backend call with updated azimuth
           return updatedParams;
         });
       },
@@ -153,6 +149,12 @@ const App = () => {
     </div>
   );
 
+  useEffect(() => {
+    if (mapRef.current && siteCoordinates.lat && siteCoordinates.lng) {
+      mapRef.current.setView([siteCoordinates.lat, siteCoordinates.lng], 14); // Center and zoom
+    }
+  }, [siteCoordinates]);
+
   return (
     <div>
       <h1>RSRP Point-Based Propagation Model</h1>
@@ -174,8 +176,12 @@ const App = () => {
         </label>
         <button onClick={() => fetchCoverageData()}>Calculate Coverage</button>
       </div>
-      <MapContainer center={[siteCoordinates.lat, siteCoordinates.lng]} zoom={14} style={{ height: "600px", width: "100%" }}>
-        <MapRecenter center={[siteCoordinates.lat, siteCoordinates.lng]} />
+      <MapContainer
+        center={[siteCoordinates.lat, siteCoordinates.lng]}
+        zoom={14}
+        style={{ height: "600px", width: "100%" }}
+        ref={mapRef}
+      >
         <LayersControl position="topright">
           <LayersControl.BaseLayer checked name="Standard Map">
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
