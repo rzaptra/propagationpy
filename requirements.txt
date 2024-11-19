@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+requests
+scipy
+numpy
+python-multipart
+googlemaps
+pydantic
