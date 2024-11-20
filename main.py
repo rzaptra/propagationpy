@@ -25,7 +25,8 @@ if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
     
 # Google Elevation API Key
-GOOGLE_API_KEY = "AIzaSyDkAWnE66-S2rVK8XBXPp2LLGVePFEw0x0"  # Replace with your valid Google API key
+#GOOGLE_API_KEY = "AIzaSyDkAWnE66-S2rVK8XBXPp2LLGVePFEw0x0"  # Replace with your valid Google API key
+GOOGLE_API_KEY = "AIzaSyBCaypdlA0GR70B5kVb7EoNeXDsTHQClew"  # Replace with your valid Google API key
 ELEVATION_URL = "https://maps.googleapis.com/maps/api/elevation/json"
 
 # Cache for elevation data
@@ -37,7 +38,7 @@ class PropagationRequest(BaseModel):
     resolution: int
     radius: float
 
-def fetch_elevation(points, batch_size=50, max_retries=3, retry_delay=2):
+def fetch_elevation(points, batch_size=300, max_retries=2, retry_delay=2):
     """
     Fetch elevation data for points using Google Elevation API.
     """
