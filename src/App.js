@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, CircleMarker, Tooltip, LayersControl, Polyline
 import "leaflet/dist/leaflet.css";
 import axios from "axios";
 
-//const BACKEND_URL = "http://localhost:8000";
+// const BACKEND_URL = "http://localhost:8000";
 const BACKEND_URL = "https://propagationpy.onrender.com";
 
 const App = () => {
@@ -71,7 +71,9 @@ const App = () => {
     const lat2Rad = toRadians(lat2);
 
     const y = Math.sin(dLng) * Math.cos(lat2Rad);
-    const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
+    const x =
+      Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+      Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
 
     return (toDegrees(Math.atan2(y, x)) + 360) % 360; // Normalize to 0-360 degrees
   };
@@ -126,23 +128,58 @@ const App = () => {
       <h4>RSRP Signal Strength</h4>
       <div style={{ display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", alignItems: "center", marginBottom: "5px" }}>
-          <div style={{ background: "red", width: "20px", height: "10px", marginRight: "5px" }}></div>
+          <div
+            style={{
+              background: "red",
+              width: "20px",
+              height: "10px",
+              marginRight: "5px",
+            }}
+          ></div>
           <span>-140 to -110 dBm</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", marginBottom: "5px" }}>
-          <div style={{ background: "yellow", width: "20px", height: "10px", marginRight: "5px" }}></div>
+          <div
+            style={{
+              background: "yellow",
+              width: "20px",
+              height: "10px",
+              marginRight: "5px",
+            }}
+          ></div>
           <span>-110 to -105 dBm</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", marginBottom: "5px" }}>
-          <div style={{ background: "lime", width: "20px", height: "10px", marginRight: "5px" }}></div>
+          <div
+            style={{
+              background: "lime",
+              width: "20px",
+              height: "10px",
+              marginRight: "5px",
+            }}
+          ></div>
           <span>-105 to -100 dBm</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", marginBottom: "5px" }}>
-          <div style={{ background: "green", width: "20px", height: "10px", marginRight: "5px" }}></div>
+          <div
+            style={{
+              background: "green",
+              width: "20px",
+              height: "10px",
+              marginRight: "5px",
+            }}
+          ></div>
           <span>-100 to -95 dBm</span>
         </div>
         <div style={{ display: "flex", alignItems: "center" }}>
-          <div style={{ background: "blue", width: "20px", height: "10px", marginRight: "5px" }}></div>
+          <div
+            style={{
+              background: "blue",
+              width: "20px",
+              height: "10px",
+              marginRight: "5px",
+            }}
+          ></div>
           <span>-95 to -40 dBm</span>
         </div>
       </div>
@@ -159,16 +196,85 @@ const App = () => {
     <div>
       <h1>RSRP Point-Based Propagation Model</h1>
       <div>
-        <label>Latitude: <input type="number" name="lat" value={siteCoordinates.lat} onChange={handleInputChange} /></label>
-        <label>Longitude: <input type="number" name="lng" value={siteCoordinates.lng} onChange={handleInputChange} /></label>
-        <label>Azimuth (°): <input type="number" name="azimuth" value={antennaParams.azimuth} onChange={handleInputChange} /></label>
-        <label>Radius (km): <input type="number" name="radius" value={radius} onChange={handleInputChange} /></label>
-        <label>Beamwidth (°): <input type="number" name="beamwidth" value={antennaParams.beamwidth} onChange={handleInputChange} /></label>
-        <label>Downtilt (°): <input type="number" name="downtilt" value={antennaParams.downtilt} onChange={handleInputChange} /></label>
-        <label>Height (m): <input type="number" name="antenna_height" value={antennaParams.antenna_height} onChange={handleInputChange} /></label>
-        <label>Frequency (MHz): <input type="number" name="frequency" value={antennaParams.frequency} onChange={handleInputChange} /></label>
-        <label>Environment:
-          <select name="environment" value={antennaParams.environment} onChange={handleInputChange}>
+        <label>
+          Latitude:{" "}
+          <input
+            type="number"
+            name="lat"
+            value={siteCoordinates.lat}
+            onChange={handleInputChange}
+          />
+        </label>
+        <label>
+          Longitude:{" "}
+          <input
+            type="number"
+            name="lng"
+            value={siteCoordinates.lng}
+            onChange={handleInputChange}
+          />
+        </label>
+        <label>
+          Azimuth (°):{" "}
+          <input
+            type="number"
+            name="azimuth"
+            value={antennaParams.azimuth}
+            onChange={handleInputChange}
+          />
+        </label>
+        <label>
+          Radius (km):{" "}
+          <input
+            type="number"
+            name="radius"
+            value={radius}
+            onChange={handleInputChange}
+          />
+        </label>
+        <label>
+          Beamwidth (°):{" "}
+          <input
+            type="number"
+            name="beamwidth"
+            value={antennaParams.beamwidth}
+            onChange={handleInputChange}
+          />
+        </label>
+        <label>
+          Downtilt (°):{" "}
+          <input
+            type="number"
+            name="downtilt"
+            value={antennaParams.downtilt}
+            onChange={handleInputChange}
+          />
+        </label>
+        <label>
+          Height (m):{" "}
+          <input
+            type="number"
+            name="antenna_height"
+            value={antennaParams.antenna_height}
+            onChange={handleInputChange}
+          />
+        </label>
+        <label>
+          Frequency (MHz):{" "}
+          <input
+            type="number"
+            name="frequency"
+            value={antennaParams.frequency}
+            onChange={handleInputChange}
+          />
+        </label>
+        <label>
+          Environment:
+          <select
+            name="environment"
+            value={antennaParams.environment}
+            onChange={handleInputChange}
+          >
             <option value="urban">Urban</option>
             <option value="suburban">Suburban</option>
             <option value="rural">Rural</option>
@@ -183,14 +289,14 @@ const App = () => {
         ref={mapRef}
       >
         <LayersControl position="topright">
-          <LayersControl.BaseLayer checked name="Standard Map">
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <LayersControl.BaseLayer checked name="Google Maps">
+            <TileLayer url="https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}" />
           </LayersControl.BaseLayer>
-          <LayersControl.BaseLayer name="Terrain Map">
-            <TileLayer url="https://tile.opentopomap.org/{z}/{x}/{y}.png" />
+          <LayersControl.BaseLayer name="Google Terrain">
+            <TileLayer url="https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}" />
           </LayersControl.BaseLayer>
-          <LayersControl.BaseLayer name="Satellite Map">
-            <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
+          <LayersControl.BaseLayer name="Google Satellite">
+            <TileLayer url="http://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}" />
           </LayersControl.BaseLayer>
         </LayersControl>
         <MapClickHandler />
