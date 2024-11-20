@@ -52,7 +52,7 @@ const App = () => {
           antenna_height: parseFloat(updatedAntennaParams.antenna_height),
           frequency: parseFloat(updatedAntennaParams.frequency),
         },
-        resolution: 20,
+        resolution: 10,
         radius: parseFloat(radius),
       });
 
