@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { MapContainer, TileLayer, CircleMarker, Tooltip, LayersControl, Polyline, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import axios from "axios";
+import Papa from "papaparse";
 
 // const BACKEND_URL = "http://localhost:8000";
 const BACKEND_URL = "https://propagationpy.onrender.com";
@@ -9,6 +10,8 @@ const BACKEND_URL = "https://propagationpy.onrender.com";
 const App = () => {
   const [siteCoordinates, setSiteCoordinates] = useState({ lat: -8.681135, lng: 115.197060 });
   const [coveragePoints, setCoveragePoints] = useState([]);
+  const [csvData, setCsvData] = useState([]);
+  const [siteID, setSiteID] = useState("");
   const [radius, setRadius] = useState(2); // Default radius in kilometers
   const [antennaParams, setAntennaParams] = useState({
     azimuth: 90,
@@ -20,6 +23,46 @@ const App = () => {
   });
   const [clickedPoint, setClickedPoint] = useState(null);
   const mapRef = useRef(null); // Reference to the map instance
+
+  useEffect(() => {
+    // Load CSV data on component mount
+    const loadCsvData = async () => {
+      try {
+        const response = await axios.get("/sites.csv"); // Replace with actual CSV path
+        Papa.parse(response.data, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (result) => {
+            setCsvData(result.data);
+          },
+        });
+      } catch (error) {
+        console.error("Error loading CSV data:", error);
+      }
+    };
+
+    loadCsvData();
+  }, []);
+
+  const handleSiteIDInput = (e) => {
+    if (e.key === "Enter") {
+      const matchedSite = csvData.find((site) => site.SiteID === siteID.trim());
+      if (matchedSite) {
+        const lat = parseFloat(matchedSite.Latitude);
+        const lng = parseFloat(matchedSite.Longitude);
+
+        if (!isNaN(lat) && !isNaN(lng)) {
+          setSiteCoordinates({ lat, lng });
+        } else {
+          alert(`Invalid coordinates for SiteID ${siteID}`);
+        }
+      } else {
+        alert("SiteID not found!");
+      }
+    } else {
+      setSiteID(e.target.value);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -197,7 +240,17 @@ const App = () => {
       <h1>RSRP Point-Based Propagation Model</h1>
       <div>
         <label>
-          Latitude:{" "}
+          Site ID:
+          <input
+            type="text"
+            value={siteID}
+            onChange={(e) => setSiteID(e.target.value.toUpperCase())}
+            onKeyDown={handleSiteIDInput}
+            placeholder="Enter SiteID and press Enter"
+          />
+        </label>
+        <label>
+          Latitude:
           <input
             type="number"
             name="lat"
@@ -206,7 +259,7 @@ const App = () => {
           />
         </label>
         <label>
-          Longitude:{" "}
+          Longitude:
           <input
             type="number"
             name="lng"
@@ -215,7 +268,7 @@ const App = () => {
           />
         </label>
         <label>
-          Azimuth (°):{" "}
+          Azimuth (°):
           <input
             type="number"
             name="azimuth"
@@ -224,7 +277,7 @@ const App = () => {
           />
         </label>
         <label>
-          Radius (km):{" "}
+          Radius (km):
           <input
             type="number"
             name="radius"
@@ -233,7 +286,7 @@ const App = () => {
           />
         </label>
         <label>
-          Beamwidth (°):{" "}
+          Beamwidth (°):
           <input
             type="number"
             name="beamwidth"
@@ -242,7 +295,7 @@ const App = () => {
           />
         </label>
         <label>
-          Downtilt (°):{" "}
+          Downtilt (°):
           <input
             type="number"
             name="downtilt"
@@ -251,7 +304,7 @@ const App = () => {
           />
         </label>
         <label>
-          Height (m):{" "}
+          Height (m):
           <input
             type="number"
             name="antenna_height"
@@ -260,7 +313,7 @@ const App = () => {
           />
         </label>
         <label>
-          Frequency (MHz):{" "}
+          Frequency (MHz):
           <input
             type="number"
             name="frequency"
@@ -300,15 +353,37 @@ const App = () => {
           </LayersControl.BaseLayer>
         </LayersControl>
         <MapClickHandler />
+        {csvData.map((site, index) => {
+          const lat = parseFloat(site.Latitude);
+          const lng = parseFloat(site.Longitude);
+            
+          if (isNaN(lat) || isNaN(lng)) {
+            console.error(`Invalid coordinates for SiteID ${site.SiteID}`);
+            return null;
+          }
+
+          return (
+            <CircleMarker
+              key={index}
+              center={[lat, lng]}
+              radius={5}
+              fillOpacity={0.8}
+              stroke={false}
+              color="purple"
+            >
+              <Tooltip>{`SiteID: ${site.SiteID}`}</Tooltip>
+            </CircleMarker>
+          );
+        })}
         {clickedPoint && (
-          <Polyline
-            positions={[
-              [siteCoordinates.lat, siteCoordinates.lng],
-              [clickedPoint.lat, clickedPoint.lng],
-            ]}
-            color="purple"
-          />
-        )}
+            <Polyline
+              positions={[
+                [siteCoordinates.lat, siteCoordinates.lng],
+                [clickedPoint.lat, clickedPoint.lng],
+              ]}
+              color="purple"
+            />
+          )}  
         {coveragePoints.map((point, index) => (
           <CircleMarker
             key={index}
