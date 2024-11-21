@@ -175,7 +175,7 @@ def calculate_rsrp_with_enhanced_los(
     # Calculate vertical alignment
     elevation_angle = math.degrees(math.atan2(site_total_height - point_total_height, distance_km * 1000))
     angle_diff = abs(elevation_angle - downtilt)
-    vertical_gain = -6 * ((angle_diff - 3) / 2) ** 2 if angle_diff > 3 else 0
+    vertical_gain = -8 * ((angle_diff - 3) / 2) ** 2 if angle_diff > 3 else 0
 
     # Path loss (COST-231 Hata)
     if base_height <= 0 or distance_km <= 0:
