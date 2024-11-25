@@ -13,10 +13,27 @@ const App = () => {
   const [csvData, setCsvData] = useState([]);
   const [siteID, setSiteID] = useState("");
   const [radius, setRadius] = useState(2); // Default radius in kilometers
+  const [selectedRegion, setSelectedRegion] = useState("BALI NUSRA"); // Default region
+  const [isLoading, setIsLoading] = useState(false); // Loading state
+  const regions = [
+    "SUMBAGUT",
+    "SUMBAGSEL",
+    "SUMBAGTENG",
+    "JABOTABEK",
+    "WEST JAVA",
+    "CENTRAL JAVA",
+    "EAST JAVA",
+    "BALI NUSRA",
+    "KALIMANTAN",
+    "SULAWESI",
+    "PUMA",
+  ];
   const [antennaParams, setAntennaParams] = useState({
     azimuth: 90,
     beamwidth: 60,
     downtilt: 5,
+    mechanical_tilt: 0,  // New
+    electrical_tilt: 0,  // New
     antenna_height: 20,
     frequency: 2300,
     environment: "urban",
@@ -25,10 +42,12 @@ const App = () => {
   const mapRef = useRef(null); // Reference to the map instance
 
   useEffect(() => {
-    // Load CSV data on component mount
+    // Load CSV data based on the selected region
     const loadCsvData = async () => {
+      setIsLoading(true); // Start loading
+      setCsvData([]); // Clear existing data
       try {
-        const response = await axios.get("/sites.csv"); // Replace with actual CSV path
+        const response = await axios.get(`/sites/sites_${selectedRegion.replace(/\s+/g, "_").toUpperCase()}.csv`); // Example: sites_BALI_NUSRA.csv
         Papa.parse(response.data, {
           header: true,
           skipEmptyLines: true,
@@ -38,11 +57,17 @@ const App = () => {
         });
       } catch (error) {
         console.error("Error loading CSV data:", error);
+      } finally {
+        setIsLoading(false); // End loading
       }
     };
 
     loadCsvData();
-  }, []);
+  }, [selectedRegion]);
+
+  const handleRegionChange = (e) => {
+    setSelectedRegion(e.target.value);
+  };
 
   const handleSiteIDInput = (e) => {
     if (e.key === "Enter") {
@@ -71,7 +96,7 @@ const App = () => {
     } else if (name === "radius") {
       setRadius(value);
     } else {
-      setAntennaParams({ ...antennaParams, [name]: value });
+      setAntennaParams({ ...antennaParams, [name]: parseFloat(value) });
     }
   };
 
@@ -94,6 +119,8 @@ const App = () => {
           downtilt: parseFloat(updatedAntennaParams.downtilt),
           antenna_height: parseFloat(updatedAntennaParams.antenna_height),
           frequency: parseFloat(updatedAntennaParams.frequency),
+          mechanical_tilt: parseFloat(updatedAntennaParams.mechanical_tilt),  // Added
+          electrical_tilt: parseFloat(updatedAntennaParams.electrical_tilt),  // Added
         },
         resolution: 10,
         radius: parseFloat(radius),
@@ -239,6 +266,16 @@ const App = () => {
     <div>
       <h1>RSRP Point-Based Propagation Model</h1>
       <div>
+      <label>
+          Region:
+          <select value={selectedRegion} onChange={handleRegionChange}>
+            {regions.map((region) => (
+              <option key={region} value={region}>
+                {region}
+              </option>
+            ))}
+          </select>
+        </label>
         <label>
           Site ID:
           <input
@@ -295,11 +332,20 @@ const App = () => {
           />
         </label>
         <label>
-          Downtilt (°):
+          Mechanical Tilt (°):{" "}
           <input
             type="number"
-            name="downtilt"
-            value={antennaParams.downtilt}
+            name="mechanical_tilt"
+            value={antennaParams.mechanical_tilt}
+            onChange={handleInputChange}
+          />
+        </label>
+        <label>
+          Electrical Tilt (°):{" "}
+          <input
+            type="number"
+            name="electrical_tilt"
+            value={antennaParams.electrical_tilt}
             onChange={handleInputChange}
           />
         </label>
@@ -367,7 +413,7 @@ const App = () => {
               key={index}
               center={[lat, lng]}
               radius={5}
-              fillOpacity={0.8}
+              fillOpacity={0.4}
               stroke={false}
               color="purple"
             >

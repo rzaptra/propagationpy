@@ -37,6 +37,8 @@ class PropagationRequest(BaseModel):
     model: dict
     resolution: int
     radius: float
+    mechanical_tilt: float = 0  # Default to 0 degrees
+    electrical_tilt: float = 0  # Default to 0 degrees
 
 def fetch_elevation(points, batch_size=300, max_retries=2, retry_delay=2):
     """
@@ -145,13 +147,15 @@ def detailed_los_with_diffraction(site_lat, site_lng, point_lat, point_lng, site
     return los_clear, normalized_loss
 
 def calculate_rsrp_with_enhanced_los(
-    site_lat, site_lng, point_lat, point_lng, frequency, base_height, tx_power, downtilt, environment
+    site_lat, site_lng, point_lat, point_lng, frequency, base_height,
+    tx_power, mechanical_tilt, electrical_tilt, environment, downtilt
 ):
     """
-    Calculate RSRP with enhanced LOS and terrain obstruction modeling.
+    Calculate RSRP with enhanced LOS and differentiated tilt effects.
     """
-    mobile_height = 1.5
+    mobile_height = 1.5  # Mobile receiver height in meters
     distance_km = np.sqrt((site_lat - point_lat) ** 2 + (site_lng - point_lng) ** 2) * 111
+
     if distance_km <= 0:
         return -140  # Invalid distance, extreme loss
 
@@ -161,10 +165,10 @@ def calculate_rsrp_with_enhanced_los(
     site_elevation = elevation_cache.get(site_key, 0)
     point_elevation = elevation_cache.get(point_key, 0)
 
-    site_total_height = max(1, base_height + site_elevation)  # Ensure positive height
+    site_total_height = max(1, base_height + site_elevation)  # Include antenna height
     point_total_height = mobile_height + point_elevation
 
-    # Perform enhanced LOS check with diffraction
+    # Enhanced LOS with diffraction
     los_clear, obstruction_penalty = detailed_los_with_diffraction(
         site_lat, site_lng, point_lat, point_lng, site_total_height, point_total_height, frequency
     )
@@ -172,15 +176,23 @@ def calculate_rsrp_with_enhanced_los(
     if not los_clear:
         return -140 + obstruction_penalty  # Apply penalty for blocked paths
 
-    # Calculate vertical alignment
+    # Calculate elevation angle
     elevation_angle = math.degrees(math.atan2(site_total_height - point_total_height, distance_km * 1000))
-    angle_diff = abs(elevation_angle - downtilt)
-    vertical_gain = -8 * ((angle_diff - 3) / 2) ** 2 if angle_diff > 3 else 0
+
+    # Apply Mechanical Tilt First
+    adjusted_angle_after_mechanical = elevation_angle - mechanical_tilt
+    mechanical_effect = -6 * ((abs(adjusted_angle_after_mechanical) - 3) / 2) ** 2 \
+        if abs(adjusted_angle_after_mechanical) > 3 else 0
+
+    # Apply Electrical Tilt on Top of Mechanical
+    adjusted_angle_after_electrical = adjusted_angle_after_mechanical - electrical_tilt
+    electrical_effect = -3 * ((abs(adjusted_angle_after_electrical) - 1.5) / 2) ** 2 \
+        if abs(adjusted_angle_after_electrical) > 1.5 else 0
+
+    # Combine effects
+    vertical_gain = mechanical_effect + electrical_effect
 
     # Path loss (COST-231 Hata)
-    if base_height <= 0 or distance_km <= 0:
-        return -140  # Invalid configuration
-
     path_loss = (
         46.3
         + 33.9 * math.log10(frequency)
@@ -198,13 +210,15 @@ def calculate_rsrp_with_enhanced_los(
 @app.post("/propagation")
 def compute_coverage(request: PropagationRequest):
     """
-    Compute coverage with enhanced LOS and terrain profiling.
+    Compute coverage with enhanced LOS, terrain profiling, and tilt differentiation.
     """
     elevation_cache.clear()
     site = request.site
     model = request.model
     resolution = request.resolution
     radius = request.radius
+    mechanical_tilt = request.mechanical_tilt
+    electrical_tilt = request.electrical_tilt
 
     # Site and model parameters
     site_lat = site["lat"]
@@ -216,7 +230,8 @@ def compute_coverage(request: PropagationRequest):
     environment = model["environment"]
     azimuth = model["azimuth"]
     beamwidth = model["beamwidth"]
-
+    mechanical_tilt = model.get("mechanical_tilt", 0)
+    electrical_tilt = model.get("electrical_tilt", 0)
     azimuth_rad = math.radians(azimuth)
     half_beamwidth_rad = math.radians(beamwidth / 2)
 
@@ -248,6 +263,8 @@ def compute_coverage(request: PropagationRequest):
             base_height=base_height,
             tx_power=tx_power,
             downtilt=downtilt,
+            mechanical_tilt=mechanical_tilt,  # Pass mechanical tilt
+            electrical_tilt=electrical_tilt,  # Pass electrical tilt
             environment=environment,
         )
         coverage_data.append({"lat": lat, "lng": lng, "rsrp": rsrp})
